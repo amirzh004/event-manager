@@ -1,7 +1,7 @@
 'use client';
 import { Star, Pencil, Trash2 } from 'lucide-react';
-import type { Event } from '../model/types';
-import { CATEGORY_LABELS, STATUS_LABELS } from '../model/constants';
+import type { Event } from '../../model/types';
+import { CATEGORY_LABELS, STATUS_LABELS } from '../../model/constants';
 import { formatEventDate } from '@/shared/lib/date';
 import { Button } from '@/shared/ui/Button/Button';
 import styles from './EventCard.module.css';

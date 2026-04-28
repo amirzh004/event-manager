@@ -1,0 +1,16 @@
+.message {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-text);
+}
+.actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+@media (max-width: 480px) {
+    .actions { flex-direction: column-reverse; }
+    .actions > * { width: 100%; }
+}

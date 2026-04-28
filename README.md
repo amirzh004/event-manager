@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Event Manager
 
-## Getting Started
+Приложение для управления мероприятиями: создание, редактирование, удаление, фильтрация, сортировка, поиск и работа с избранным.
 
-First, run the development server:
+## Стек
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Next.js 14+** (App Router, Server + Client Components)
+- **TypeScript**
+- **CSS Modules** — дизайн через CSS-переменные
+- **react-hook-form + Zod** — управление формами и валидация
+- **date-fns** — работа с датами
+- **lucide-react** — иконки
+- **Geist** (через `next/font`) — типографика
+- **localStorage** — персистентность (изолирована за интерфейсом `EventsRepository`)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Запуск
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Требуется Node.js 18.17+ и Yarn (или npm).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+````bash
+yarn install
+yarn dev          # http://localhost:3000
+````
 
-## Learn More
+При первом запуске localStorage инициализируется демо-данными из `src/store/repository/mockData.ts`.
 
-To learn more about Next.js, take a look at the following resources:
+## Структура проекта
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Применён упрощённый Feature-Sliced подход. Зависимости направлены сверху вниз: `app → widgets → features → entities → shared`. Нижние слои не знают о верхних.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+````
+src/
+├── app/                 # Next.js App Router (страницы — Server Components)
+│   ├── layout.tsx       # Root layout с навигацией и провайдерами
+│   ├── page.tsx         # Главная — все мероприятия
+│   ├── favorites/       # /favorites — избранные
+│   ├── providers.tsx    # Клиентские провайдеры (события, тосты)
+│   └── globals.css      # Дизайн (CSS-переменные)
+│
+├── entities/
+│   └── event/           # Сущность Event
+│       ├── model/       # Типы, Zod-схема, константы
+│       └── ui/          # EventCard
+│
+├── features/            # Пользовательские фичи
+│   ├── event-form/      # Форма создания/редактирования
+│   ├── event-filters/   # Фильтрация, сортировка, поиск
+│   ├── event-delete/    # Диалог подтверждения удаления
+│   ├── event-favorite/  # Избранное
+│   ├── event-export/    # Экспорт в JSON
+│   └── event-pagination/# Пагинация
+│
+├── widgets/             # Композиции фич
+│   ├── EventManager/    # Главный widget со списком и модалками
+│   ├── Hero/            # Hero-секция с заголовком и статистикой
+│   └── AppNav/          # Навигация (активная ссылка)
+│
+├── shared/
+│   ├── ui/              # UI-компоненты (Button, Input, Select, Textarea, Modal, Toast)
+│   ├── lib/             # Утилиты (даты, генерация id)
+│   └── config/          # Константы (ключи storage, размер страницы)
+│
+└── store/
+    ├── events/          # Глобальное состояние (Context + useReducer)
+    │   ├── EventsContext.tsx
+    │   ├── eventsReducer.ts
+    │   ├── eventsActions.ts
+    │   └── useEvents.ts # Публичный API хранилища
+    └── repository/
+        ├── EventsRepository.ts        # Интерфейс
+        ├── LocalStorageRepository.ts  # Реализация
+        └── mockData.ts                # Стартовые данные
+````
 
-## Deploy on Vercel
+## Архитектурные решения
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Состояние: useReducer + Context
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Глобальное состояние событий построено на `useReducer` с типизированными actions. Reducer чистый: переходы состояний детерминированы, тестируемы, не содержат сайд-эффектов. Загрузка/сохранение в localStorage изолированы в `EventsProvider` через `useEffect` — состояние и хранилище разделены.
+
+### Repository pattern для данных
+
+UI работает не с `localStorage` напрямую, а с интерфейсом `EventsRepository`. Текущая реализация — `LocalStorageRepository`.
+
+### Server vs Client Components
+
+- `app/layout.tsx`, `app/page.tsx`, `app/favorites/page.tsx` — Server Components
+- `widgets/EventManager` и всё ниже по дереву — Client Components, поскольку нуждаются в состоянии и интерактиве
+- `widgets/AppNav` — отдельный Client component внутри Server-layout (для определения активной ссылки через `usePathname`)
+
+## Реализованные функции
+
+### Основные
+
+- Просмотр мероприятий в виде сетки карточек
+- Создание мероприятия через модальное окно с валидацией
+- Редактирование (та же форма с прокинутыми initial-данными)
+- Удаление с подтверждением через диалог
+- Фильтрация по категории и статусу
+- Сортировка по дате (↑/↓) и названию (А→Я / Я→А)
+- Валидация: обязательное название, обязательная дата, дата не в прошлом для запланированных событий
+
+### Опциональные (все реализованы)
+
+- Поиск по названию и описанию
+- Избранное и отдельная вкладка `/favorites`
+- Экспорт списка мероприятий в JSON-файл
+- Пагинация с компактным отображением страниц (`1 … 4 5 6 … 20`)
